@@ -1,0 +1,66 @@
+#======================================================
+# Default values for PTP Pod.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+componentslist: ['ptp']
+
+replicaCount: 1
+
+image:
+    repository: oc5g-docker-prod-suwanee.binaryrepo-east.arrisi.com/
+    tag: siqbuild.6.0.0.46.2-intpb
+    imagePullSecrets: []
+
+podSecurityContext: {}
+
+gnbBuildVersion: "d.um.m.yy"
+
+podVarRunVolumeMount: varrunvolumemount
+defaultcorefilepath: /var/log/corefiles
+coreFileDirName: corefile
+
+podHostNetwork: true
+
+nodeSelector:
+    "gnbnodename": "dumachine"
+
+tolerations: []
+
+affinity: {}
+
+#======================================================
+# Default values for PTP stack container of the PTP pod
+# This is a YAML-formatted file
+# Declare variables to be passed into your templates.
+
+ptp:
+    PodUniqueName: "gnb-ptp"
+    name: gnb-ptp
+
+    image:
+        repository: ""
+        image: gnb-ptp
+        tag: ""
+        pullPolicy: IfNotPresent
+
+    securityContext:
+        privileged: yes
+        capabilities:
+            add: ["SYS_ADMIN", "IPC_LOCK", "SYS_NICE", "SYS_RESOURCE"]
+
+    resources:
+        limits:
+            cpu: "100m"
+            memory: "100Mi"
+        requests:
+            cpu: "100m"
+            memory: "100Mi"
+
+    ptpIntf: "enp101s0f1"
+    ptpGmIp: "192.168.10.250"
+    ptpDreqRate: "-6"
+    ptpSyncRate: "-6"
+
+    coreVolume: coreptp
+#======================================================

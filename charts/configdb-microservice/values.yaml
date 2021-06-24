@@ -1,0 +1,70 @@
+componentslist: ['mariadb','configdb']
+image:
+  repository: oc5g-docker-prod-suwanee.binaryrepo-east.arrisi.com/
+  tag: siqbuild.6.0.0.46.2-int
+
+nodeSelector: 
+  kubernetes.io/hostname: controller-0
+
+service:
+  serviceName: configdbsvc
+  serviceType: ClusterIP
+  serviceLabel: configdbsvc
+  port: 50055
+  targetPort: 50055
+  portName: grpc
+  selectorIdentity: configdb-pod
+
+pvc:
+  claimName: mariadb-claim
+  storageClassName: general
+  accessModes: ReadWriteOnce
+  resourcePolicy: "keep"
+  storage: 1Gi
+
+deploymentName: configdb-deploy
+deploymentLabel: configdb-deploy
+replicaCount: 1
+deploymentSelectorLabel: configdb-pod
+deploymentTemplateLabel: configdb-pod
+deploymentTemplateIdentity: configdb-pod
+
+mariadb:
+  containerName: mariadb
+  image:
+    repository: ""
+    image: mariadb
+    tag: ""
+  imagePullPolicy: Always
+  containerPort: 3306
+  liveliness:
+      initialDelaySec: 120
+      periodSec: 10
+      timeoutSec: 1
+      sucessThreshold: 1
+      failureThreshold: 3
+  readiness:
+      initialDelaySec: 30
+      periodSec: 10
+      timeoutSec: 1
+      successThreshold: 1
+      failureThreshold: 3
+  env:
+      sqlRootPassword: root
+      dbName: configdb
+
+configdb:
+  containerName: configdb
+  image:
+    repository: ""
+    image: configdb
+    tag: ""
+  imagePullPolicy: Always
+  containerPort: 50055
+  env:
+      dbUserName: root
+      dbUserPassword: root
+      dbName: configdb
+      dbService: localhost
+      dbListenPort: 50055
+      dbPort: 3306

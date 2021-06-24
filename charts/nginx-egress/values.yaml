@@ -1,0 +1,200 @@
+#--------------------------------------
+# VNFM Requirements
+#--------------------------------------
+componentslist: ['nginx']
+image:
+  repository: oc5g-docker-prod-suwanee.binaryrepo-east.arrisi.com/
+  tag: siqbuild.6.0.0.46.2-int
+
+#______________________________________
+# Configmap
+#---------------------------------------
+nginxconf:
+  hostList:
+    virtualhosts.json: |
+      {
+        "all-nodes": {
+          "dns_server": "10.212.1.250",
+          "grpc_port": "5000",
+          "pods": {
+            "cs-gnb-du-deploy": {
+              "internal_port": "5001",
+              "server_fqdn": "https://DMS-Lite:7002/eventListener/v7"
+            },
+            "cs-gnb-cucp-deploy": {
+              "internal_port": "5002",
+              "server_fqdn": "https://DMS-Lite:7002/eventListener/v7"
+            },
+            "cs-gnb-cuup-deploy": {
+              "internal_port": "5003",
+              "server_fqdn": "https://DMS-Lite:7002/eventListener/v7"
+            }
+          }
+        }
+      }
+
+  vesserverCertKeyMap:
+    vesservers.json: |
+      {
+        "https://DMS-Lite:7002/eventListener/v7": "cacert-0.pem"
+      }
+
+  notificationServerPortMap:
+    notificationservers.json: |
+      {
+        "controller-0": "6001",
+        "controller-1": "6002"
+      }
+  certList:
+    cacert-0.pem: |
+      -----BEGIN CERTIFICATE-----
+      MIIDYTCCAkmgAwIBAgIEKwV9CjANBgkqhkiG9w0BAQsFADBhMQswCQYDVQQGEwJJ
+      TjELMAkGA1UECBMCS0ExDDAKBgNVBAcTA0JMUjERMA8GA1UEChMIRE1TLUxpdGUx
+      ETAPBgNVBAsTCERNUy1MaXRlMREwDwYDVQQDEwhETVMtTGl0ZTAeFw0yMTAzMDQx
+      NjEwMTNaFw0yMjAzMDQxNjEwMTNaMGExCzAJBgNVBAYTAklOMQswCQYDVQQIEwJL
+      QTEMMAoGA1UEBxMDQkxSMREwDwYDVQQKEwhETVMtTGl0ZTERMA8GA1UECxMIRE1T
+      LUxpdGUxETAPBgNVBAMTCERNUy1MaXRlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A
+      MIIBCgKCAQEAiKBReR6tMRyCYdlPmsril/lJZ18MPs2wyZf9ubNccW6TeL/4og2U
+      9unm2x55aQTIhuU4JRC/S6kc1uGajJXu1znTvwp4dIL4lBJ5a+gwiuAIYZru4sYj
+      Lzh56u02IMsstI2Pb1XmsQEhQNMfVGvf3P8v9qsEVL8FnaCXpzV24iYi2/PwFp7/
+      FxvozqSpEy9AFrpFAxANQ0/U8M60Wz6zCcT7hULfPN1aPaPdfm8bpPYnh2jXgmNx
+      iOg7eFtuKdxhBrS8chaxghfXdW4cBDGEMI4vvkoAqcyZ0Y1z6+Fd5uRrHS4JNx8V
+      2Ukr9ypo/p8RfFFPfCr+KNuzHGWd0jy6xwIDAQABoyEwHzAdBgNVHQ4EFgQUv1o4
+      0I1gOPqQRtVaifJZZkyQRgEwDQYJKoZIhvcNAQELBQADggEBAHJGtz+vy/nAG0KT
+      D928vWBjKN6VQyR6fki3NPEfS2QSxj5vOUpQ3Kb93qMrQ/U9+q/YohY2fT3/iulF
+      Cma/EfrtKCiFHUOfK8268pkurCDE6iLgBmh74EDhPXH3NtFDd08TXg28NDOW4HiV
+      X8Mj8XyWRr2FGtlamH9Esfa8G4ei6Uwz8WPi2BTk3JcL+wCcM4uml9BGWdWv0xxN
+      YQgogh5/H7dxlSS0GhLVrrAANUO11efy76ueItRkRlGC2oy9DIyIr6O2O/V47kSQ
+      mHyL+Ce1KMi5vtpdgxfNYKbTbWJLEtFKVHzYauRFJaOmx4cgpFPojyVf284Rxr79
+      DzViGgA=
+      -----END CERTIFICATE-----
+
+    cacert-1.pem: |
+
+    cacert-2.pem: |
+
+    cacert-3.pem: |
+
+    cacert-4.pem: |
+
+#______________________________________
+# Service
+#---------------------------------------
+svcnameOverride: nginxvesproxysvc
+service:
+  type: ClusterIP
+  ports:
+    grpc:
+    - 5000
+    - 6000
+    - 6001
+    - 6002
+    http:
+    - 5001
+    - 5002
+    - 5003
+  sessionAffinity: ClientIP
+  topologyKeys:
+  - kubernetes.io/hostname
+
+#______________________________________
+# Daemonset
+#---------------------------------------
+# Default values for nginx-egress.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: "nginx-egress"
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name:
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+podAnnotations:
+    danm.k8s.io/interfaces: |
+        [
+          {
+            "clusterNetwork": "default",
+            "ip": "dynamic"
+          },
+          {
+            "clusterNetwork": "sriov-o1c",
+            "ip": "dynamic",
+            "proutes": { "10.53.201.0/24": "10.207.2.254" }
+          }
+        ]
+
+nginx:
+  image:
+    repository: ""
+    image: nginx-egress
+    tag: ""
+    pullPolicy: Always
+
+  environmentVariables:
+    - name: MY_TARGET_NODE
+      val: all-nodes
+    - name: MY_CONFIGMAP
+      val: /home/configmap/virtualhosts.json
+    - name: NGINX_VIRTUALHOST_DIR
+      val: /etc/nginx/conf.d/
+    - name: RESOURCE_PATH
+      val: /home/resources/
+    - name: CONFIGDB_SVC
+      val: configdbsvc:50055
+    - name: ENABLE_DB
+      val: 1
+
+  volumeMounts:
+    virtualhost: /home/configmap
+    resource: /home/resources
+
+  entrypoint:
+    override: false
+    cmd: '[ "/bin/bash", "-c", "--" ]'
+    args: '[ "while true; do sleep 30; done;" ]'
+
+volumes:
+  nginxEgressConfigMap: nginx-egress-conf
+
+virtualHostItems:
+  - virtualhosts.json
+
+resourceItems:
+  - cacert-0.pem
+  - cacert-1.pem
+  - cacert-2.pem
+  - cacert-3.pem
+  - cacert-4.pem
+  - vesservers.json
+  - notificationservers.json
+
+# Default: Can be overridden in extern_values.yaml
+allowExternalResources: false
+# externalResources:
+# Default: Can be overridden in extern_values.yaml
+resources:
+  intel.com/pci_sriov_net_physnet0:
+    numverOfVfs: 1
+  # intel.com/pci_sriov_net_physnet1:
+  #   numverOfVfs: 30
+  #   vfInterfaceOverride: true
+  #   vfInterface:
+  #     limit: 30
+  #     request: 10
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

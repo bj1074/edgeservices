@@ -1,0 +1,13 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-egress-conf
+  annotations:
+    "helm.sh/hook": pre-install
+    "helm.sh/hook-weight": "5"
+data:
+  {{- toYaml .Values.nginxconf.hostList | nindent 2 }}
+  {{- toYaml .Values.nginxconf.vesserverCertKeyMap | nindent 2 }}
+  {{- toYaml .Values.nginxconf.notificationServerPortMap | nindent 2 }}
+  {{- toYaml .Values.nginxconf.certList | nindent 2 }}

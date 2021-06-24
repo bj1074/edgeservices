@@ -1,0 +1,17 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: {{ .Values.pvc.claimName }}
+  {{- if eq .Values.pvc.resourcePolicy "keep" }}
+  annotations:
+    helm.sh/resource-policy: keep
+    helm.sh/hook: "pre-install"
+    helm.sh/hook-weight: "5"
+  {{- end }}
+spec:
+  storageClassName: {{ .Values.pvc.storageClassName }}
+  accessModes:
+    - {{ .Values.pvc.accessModes }}
+  resources:
+    requests:
+      storage: {{ .Values.pvc.storage }}

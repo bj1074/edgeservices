@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.deploymentName }}
+  labels:
+    app: {{ .Values.deploymentLabel }}
+  annotations:
+    helm.sh/hook: "pre-install"
+    helm.sh/hook-weight: "5"
+       
+spec:
+  strategy:
+    type: Recreate
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.deploymentSelectorLabel }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.deploymentTemplateLabel }}
+        identity:  {{ .Values.deploymentTemplateIdentity }}
+    spec:
+      volumes:
+      - name: configdb-volume
+        persistentVolumeClaim:
+           claimName: {{ .Values.pvc.claimName }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      containers:
+      - name: {{ .Values.mariadb.containerName }}
+        image: "{{ .Values.mariadb.image.repository | default .Values.image.repository }}{{ .Values.mariadb.image.name }}:{{ .Values.mariadb.image.tag | default .Values.image.tag}}"
+        imagePullPolicy: {{ .Values.mariadb.imagePullPolicy }}
+        ports:
+        - containerPort: {{ .Values.mariadb.containerPort }}
+        livenessProbe:
+          exec:
+            command: ["sh", "-c", "exec mysqladmin status -uroot -p$MYSQL_ROOT_PASSWORD"]
+          initialDelaySeconds: {{ .Values.mariadb.liveliness.initialDelaySec }}
+          periodSeconds: {{ .Values.mariadb.liveliness.periodSec }}
+          timeoutSeconds: {{ .Values.mariadb.liveliness.timeoutSec }}
+          successThreshold: {{ .Values.mariadb.liveliness.sucessThreshold }}
+          failureThreshold: {{ .Values.mariadb.liveliness.failureThreshold }}
+        readinessProbe:
+          exec:
+            command: ["sh", "-c", "exec mysqladmin status -uroot -p$MYSQL_ROOT_PASSWORD"]
+          initialDelaySeconds: {{ .Values.mariadb.readiness.initialDelaySec }}
+          periodSeconds: {{ .Values.mariadb.readiness.periodSec }}
+          timeoutSeconds: {{ .Values.mariadb.readiness.timeoutSec }}
+          successThreshold: {{ .Values.mariadb.readiness.successThreshold }}
+          failureThreshold: {{ .Values.mariadb.readiness.failureThreshold }}
+
+        env:
+          - name: MYSQL_ROOT_PASSWORD
+            value: {{ .Values.mariadb.env.sqlRootPassword | quote }}
+          - name: DB_NAME
+            value: {{ .Values.mariadb.env.dbName | quote }}
+        volumeMounts:
+          - mountPath: "/var/lib/mysql"
+            name: configdb-volume
+
+      - name: {{ .Values.configdb.containerName }}
+        image: "{{ .Values.configdb.image.repository | default .Values.image.repository }}{{ .Values.configdb.image.name }}:{{ .Values.configdb.image.tag | default .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.configdb.imagePullPolicy }}
+        ports:
+        - containerPort: {{ .Values.configdb.containerPort }}
+        env:
+          - name: DB_USERNAME
+            value: {{ .Values.configdb.env.dbUserName | quote }}
+          - name: DB_PASSWORD
+            value:  {{ .Values.configdb.env.dbUserPassword | quote }}
+          - name: DB_NAME
+            value:  {{ .Values.configdb.env.dbName | quote }}
+          - name: DB_SERVICE
+            value:  {{ .Values.configdb.env.dbService | quote }}
+          - name: CONFIG_DB_GRPC_LISTEN_PORT
+            value:  {{ .Values.configdb.env.dbListenPort | quote }}
+          - name: DB_PORT
+            value:  {{ .Values.configdb.env.dbPort | quote }}

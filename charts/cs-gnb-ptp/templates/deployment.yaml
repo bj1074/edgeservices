@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ptp.fullname" . }}
+  labels:
+    {{- include "ptp.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: "pre-install"
+    helm.sh/hook-weight: "7"
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "ptp.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+    {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      labels:
+        {{- include "ptp.selectorLabels" . | nindent 8 }}
+    spec:
+      hostNetwork: {{ .Values.podHostNetwork }} 
+      volumes:
+        {{- include "ptp.varrunVolume" . | nindent 8 }}
+        {{- include "ptp.coreVolume" . | nindent 8 }} 
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        {{- include "container.ptp" . | nindent 8 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

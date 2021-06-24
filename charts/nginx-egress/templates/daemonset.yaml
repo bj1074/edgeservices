@@ -1,0 +1,108 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ include "nginx-egress.fullname" . }}
+  labels:
+    {{- include "nginx-egress.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: "pre-install"
+    helm.sh/hook-weight: "6"
+spec:
+  selector:
+    matchLabels:
+      {{- include "nginx-egress.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "nginx-egress.selectorLabels" . | nindent 8 }}
+    {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: {{ .Values.nginx.image.repository | default .Values.image.repository }}{{ .Values.nginx.image.image }}:{{ .Values.nginx.image.tag | default .Values.image.tag }}
+          imagePullPolicy: {{ .Values.nginx.image.pullPolicy }}
+          {{- if .Values.nginx.entrypoint.override }}
+          command: {{ .Values.nginx.entrypoint.cmd }}
+          args: {{ .Values.nginx.entrypoint.args }}
+          {{- end }}
+          resources:
+          {{- if .Values.allowExternalResources }}
+          {{- range $sriovDevicePoolName, $sriovDevicePoolVfs := .Values.externalResources }}
+            {{- if $sriovDevicePoolVfs.vfInterfaceOverride }}  
+            limits:
+                {{- toYaml $sriovDevicePoolName | nindent 16 }}: {{ $sriovDevicePoolVfs.vfInterface.limit }}
+            requests:
+                {{- toYaml $sriovDevicePoolName | nindent 16 }}: {{ $sriovDevicePoolVfs.vfInterface.request }}
+            {{- else}}
+            limits:
+                {{- toYaml $sriovDevicePoolName | nindent 16 }}: {{ $sriovDevicePoolVfs.numverOfVfs }}
+            requests:
+                {{- toYaml $sriovDevicePoolName | nindent 16 }}: {{ $sriovDevicePoolVfs.numverOfVfs }}
+            {{- end}}
+          {{- end }}
+          {{- else }}
+          {{- range $sriovDevicePoolName, $sriovDevicePoolVfs := .Values.resources }}
+            {{- if $sriovDevicePoolVfs.vfInterfaceOverride }}  
+            limits:
+                {{- toYaml $sriovDevicePoolName | nindent 16 }}: {{ $sriovDevicePoolVfs.vfInterface.limit }}
+            requests:
+                {{- toYaml $sriovDevicePoolName | nindent 16 }}: {{ $sriovDevicePoolVfs.vfInterface.request }}
+            {{- else}}
+            limits:
+                {{- toYaml $sriovDevicePoolName | nindent 16 }}: {{ $sriovDevicePoolVfs.numverOfVfs }}
+            requests:
+                {{- toYaml $sriovDevicePoolName | nindent 16 }}: {{ $sriovDevicePoolVfs.numverOfVfs }}
+            {{- end}}
+          {{- end }}
+          {{- end }}
+          env:
+            - name: MY_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            {{- range .Values.nginx.environmentVariables }}
+            - name: "{{ .name }}"
+              value: "{{ .val }}"
+            {{- end }}
+            - name: MY_NOTIFICATION_SVC_ENDPOINT
+              value: {{ include "nginx-egress-svc.fullname" . }}
+          volumeMounts:
+          - name: virtualhost
+            mountPath: {{ .Values.nginx.volumeMounts.virtualhost }}
+            readOnly: true
+          - name: resource
+            mountPath: {{ .Values.nginx.volumeMounts.resource }}
+            readOnly: true
+      volumes:
+      - name: virtualhost
+        configMap:
+          name: {{ .Values.volumes.nginxEgressConfigMap }}
+          items:
+            {{- range .Values.virtualHostItems }}
+            - key: {{ . }}
+              path: {{ . }}
+            {{- end }}
+      - name: resource
+        configMap:
+          name: {{ .Values.volumes.nginxEgressConfigMap }}
+          items:
+            {{- range .Values.resourceItems }}
+            - key: {{ . }}
+              path: {{ . }}
+            {{- end }}
+            
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
